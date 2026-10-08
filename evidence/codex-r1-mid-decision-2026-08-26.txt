@@ -1,0 +1,24 @@
+session: 01a03ebb-e0ca-76f1-aef4-382be5beb609
+model: gpt-5.6-sol
+verdict: SHIP-A-WITH-EDITS
+blockers: none
+
+STRUCTURED REVIEW (verbatim close):
+
+1. BLOCKER
+None. R0 reports true_marker = 0 across every bucket, not merely FIT, and
+explicitly gives true_marker ∩ fit≤3000 ∩ has_src = []. No evidenced
+true-marker recovery target requiring recover/restart.
+
+2. IMPROVEMENT
+Edit the rationale to say that all observed rows are either stub-shaped or
+incidental phrase hits—not true markers. lcm_recover.py selects broad phrase
+matches (LIKE TRUNC_MARKER, nonempty source_ids, NOT LIKE '[stub-recovery%').
+Raising --max-source-tokens widens that phrase-based population; it would not
+establish that those rows are genuine truncation markers.
+
+3. SCOPE
+No named node is an overlooked FIT true_marker. 1744 phrase-hit; 1762/1770/1801/1820/1842 MID; 1609 LARGE stub.
+
+4. VERDICT
+SHIP-A-WITH-EDITS. Docs-only closeout, no recovery or restart.

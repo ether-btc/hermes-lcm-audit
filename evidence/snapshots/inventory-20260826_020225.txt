@@ -1,0 +1,26 @@
+# lcm-hygiene snapshot: inventory @ 20260826_020225
+DB=/home/hermes-pi/.hermes/lcm.db
+ENV=/home/hermes-pi/.config/hermes-gateway.env
+CFG=/home/hermes-pi/.hermes/config.yaml
+---total---
+1225
+---l3---
+655
+---unrecoverable---
+203
+---recoverable---
+452
+---l3-axis-fit--
+139
+---l3-axis-boundary-25--
+8
+---l3-axis-mid--
+61
+---l3-axis-large--
+447
+---env LCM_SUMMARY_TIMEOUT_MS---
+(missing)
+---env LCM_LEAF_CHUNK_TOKENS---
+LCM_LEAF_CHUNK_TOKENS=2000
+---config.yaml:111---
+  review:

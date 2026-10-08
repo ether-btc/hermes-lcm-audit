@@ -1,0 +1,5 @@
+MAGNITUDE: 90000
+LEVER: both
+RATIONALE: Use `LCM_SUMMARY_TIMEOUT_MS=90000` with `compression.hygiene_timeout_seconds=120`, preserving a 30s outer margin. The transcript confirms the 60000ms default/env wiring at lines 19–20, but contains no summary-latency benchmark; its 934s runtime was dominated by DB backup and FTS testing at lines 34–73, and its synthesis truncates at line 76. Live code applies the env timeout at `hermes-lcm/config.py:834-842`, while the real hygiene knob is read at `gateway/run.py:19266-19271`. Because hygiene is an idle fence (`gateway/run.py:19538-19572`) and LCM may not emit progress, raising only the inner timeout could still permit the 30s outer fence to preempt it.
+TRIGGER-TO-REVERT: Drop back to 60000ms if, across 2–3 representative long sessions, successful L1/L2 calls remain below 60s and no new timeout-driven L3 markers appear.
+TRIGGER-TO-INCREASE: Raise to 120000ms only if correctly sized, in-context L1/L2 calls demonstrably hit 90000ms while still making useful model progress; context-overflow failures do not qualify.

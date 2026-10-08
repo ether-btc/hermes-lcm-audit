@@ -1,0 +1,11 @@
+2026-08-25T20:45:42Z	status=DRIFT	total=1214	l3=649	delta_vs_baseline=+1	unrecoverable=203	recoverable=446
+2026-08-25T20:51:27Z	status=OK	total=1217	l3=651	delta_vs_baseline=+0	unrecoverable=203	recoverable=448	axis=fit=144,mid=61,large=446
+2026-08-25T21:12:03Z	status=DRIFT	total=1220	l3=651	delta_vs_baseline=+3	unrecoverable=203	recoverable=448	axis=fit=144,mid=61,large=446
+2026-08-26T08:28:05Z	status=DRIFT	total=1233	l3=661	delta_vs_baseline=+13	unrecoverable=203	recoverable=458	axis=fit=150,mid=62,large=449	postflip_l3=0
+2026-08-26T08:28:21Z	status=DRIFT	total=1233	l3=661	delta_vs_baseline=+13	unrecoverable=203	recoverable=458	axis=fit=150,mid=62,large=449	postflip_l3=0
+2026-08-26T10:15:43Z	status=DRIFT	total=1252	l3=658	delta_vs_baseline=+10	unrecoverable=203	recoverable=455	axis=fit=144,mid=61,large=453	postflip_l3=0
+2026-08-26T10:24:03Z	status=DRIFT	total=1257	l3=659	delta_vs_baseline=+11	unrecoverable=203	recoverable=456	axis=fit=144,mid=62,large=453	postflip_l3=0
+2026-08-26T10:25:15Z	status=DRIFT	total=1257	l3=659	delta_vs_baseline=+11	unrecoverable=203	recoverable=456	axis=fit=144,mid=62,large=453	postflip_l3=0
+2026-08-26T10:35:36Z	status=DRIFT	total=1257	l3=659	delta_vs_baseline=+11	unrecoverable=203	recoverable=456	axis=fit=144,mid=62,large=453	postflip_l3=0
+2026-08-26T10:52:20Z	status=DRIFT	total=1257	l3=659	delta_vs_baseline=+11	unrecoverable=203	recoverable=456	axis=fit=144,mid=62,large=453	postflip_l3=21
+2026-08-26T15:38:29Z	status=DRIFT	total=1305	l3=680	delta_vs_baseline=+32	unrecoverable=203	recoverable=477	axis=fit=154,mid=64,large=462	postflip_l3=42

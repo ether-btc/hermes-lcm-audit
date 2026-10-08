@@ -1,0 +1,18 @@
+# lcm-hygiene snapshot: post-edit @ 20260825_203345
+DB=/home/hermes-pi/.hermes/lcm.db
+ENV=/home/hermes-pi/.config/hermes-gateway.env
+CFG=/home/hermes-pi/.hermes/config.yaml
+---total---
+1211
+---l3---
+648
+---unrecoverable---
+203
+---recoverable---
+445
+---env LCM_SUMMARY_TIMEOUT_MS---
+LCM_SUMMARY_TIMEOUT_MS=60000
+---env LCM_LEAF_CHUNK_TOKENS---
+LCM_LEAF_CHUNK_TOKENS=2000
+---config.yaml:111---
+    model: custom:llama-cpp/Qwen2.5-0.5B-Instruct-Q4_K_M

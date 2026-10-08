@@ -1,0 +1,118 @@
+## 1. Correctness of the density heuristic and retry ladder
+
+The heuristic improves the measured cases, but it is not a safe upper bound. The claim that rung 1 “fits n_ctx even for blob-dense sources” is too strong.
+
+Specific concerns:
+
+- [lcm_recover.py:230](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:230) examines only the first 8,000 characters, but the prose/code branch can retain 9,900. The unexamined final 1,900 characters may be substantially denser.
+- Whitespace ratio is not a reliable token-density proxy. Space-delimited hex, wrapped dumps, short-line generated data, or random identifiers separated every 10–12 characters can exceed 8% whitespace while remaining much denser than code.
+- The non-ASCII branches at [lines 232–235](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:232) are averages, not worst-case bounds. Emoji, rare Unicode, combining sequences, or mixed ASCII/Unicode can tokenize above one token per Python character. A 4,500- or 7,500-character allowance can therefore exceed context badly.
+- `.isspace()` includes more than ordinary spaces and newlines, making the classifier easier to misclassify.
+- The classifier ignores chat-template overhead. The 400-token requested output leaves reasonable margin only if the 3,000-input estimate is real.
+- The evidence artifact is incomplete: [v21_margin_probe.py:19](/home/hermes-pi/projects/lcm-hygiene/scripts/v21_margin_probe.py:19) does not test base64, emoji, space-delimited hex, 2,550 characters, or 9,900 characters, despite the claims in the recovery script.
+
+The ladder at [line 248](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:248) is incoherent:
+
+```python
+(first_rung, 8000, 4000, 2000)
+```
+
+If blob detection chooses 2,550 and that request overflows, the next attempts grow to 8,000 and 4,000. For a source shorter than those limits, they resend the identical overflowing prompt. Only 2,000 is a real reduction. The same problem exists for a 4,500- or 7,500-character Unicode first rung.
+
+The error detection at [lines 268–276](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:268) is also brittle string matching. A differently worded llama-server/OpenAI-client 400 will abort instead of descending the ladder.
+
+Recommended correction:
+
+- Prefer the server’s actual tokenizer and binary-search the complete rendered prompt to a safe prompt-token ceiling.
+- Otherwise treat density only as an initial guess and make subsequent attempts strictly decreasing and deduplicated, for example `first`, `min(first-1, 2000)`, `1000`, `500`.
+- Include adversarial tests for spaced hex, wrapped base64, random alphanumeric text with 8–10% whitespace, emoji, mixed scripts, and long tool JSON.
+- Consider head/tail retention and an explicit “input truncated” marker. Currently [line 249](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:249) silently preserves only the head.
+
+## 2. Does the Phase 2.5 fork also need fixing?
+
+For this particular `--local-only` recovery execution, fixing `_local_summarize` is sufficient to control the recovery script’s requests. The route at [lines 418–424](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:418) does not call `summarize_with_escalation`.
+
+It is not sufficient as the overall Phase 2.5 fix.
+
+The production guard still compares and binary-searches using the same inaccurate estimator at [escalation.py:620–625](/home/hermes-pi/projects/hermes-lcm-phase25/escalation.py:620) and [escalation.py:556–572](/home/hermes-pi/projects/hermes-lcm-phase25/escalation.py:556). Binary search only establishes “≤3,000 according to the estimator”; it does not establish “≤3,000 Qwen tokens.” Dense ASCII remains especially undercounted by [tokens.py:101–102](/home/hermes-pi/projects/hermes-lcm-phase25/tokens.py:101).
+
+Therefore:
+
+- The fork should be fixed before Phase 2.5 is declared resolved.
+- It need not block the recovery run if the recovery tool is corrected independently.
+- Editing the fork will not protect the already running gateway until a controlled restart/reload. With restarts banned, schedule that deployment separately.
+- Until then, concurrent gateway compression can continue producing new context failures/L3 nodes even while old ones are being recovered.
+
+One additional coupling: `--local-only` still calls `_load_summarizer()` merely to obtain `count_tokens` at [line 420](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:420). Its default path is the potentially old checkout at [line 14](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:14). Supply the Phase 2.5 `--plugin-dir` explicitly or decouple token counting from loading the whole escalation module.
+
+## 3. Live-run risks
+
+`BEGIN IMMEDIATE` with short per-row transactions is a reasonable concurrency model. LLM generation happens outside the write transaction, so the database is not locked for inference time. WAL is enabled, and the live database currently passes `quick_check`.
+
+Important issues remain:
+
+1. **The live safety gate omits `--local-only`.**
+
+   At [lines 361–366](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:361), the gate covers only `args.live or args.stub`. `--local-only` writes at line 443 without requiring `--confirm-live` or validating `--backup`.
+
+   Your supplied flags do not repair the code-level bypass; they are simply ignored by the gate. Add `args.local_only` and reject contradictory mode combinations.
+
+2. **The row is read before acquiring the write lock.**
+
+   `old_summary` is fetched at [lines 57–60](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:57), before `BEGIN IMMEDIATE`. Another writer could alter or delete the row between those operations.
+
+   Acquire the lock first, then read. The guarded update should ideally require `summary = ?` using the exact value read, not merely `summary LIKE marker` at [lines 75–77](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:75).
+
+3. **The backup check only proves that some file exists.**
+
+   [Line 373](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:373) does not establish that it is current, distinct from the live DB, complete with respect to WAL, or restorable. Use SQLite `.backup`, then run `quick_check` on the backup and record its timestamp/hash. The help text’s suggestion that a plain copy is equivalent is unsafe for an active WAL database unless the WAL state is handled correctly.
+
+4. **The candidate population has already drifted.**
+
+   My read-only query of the current live DB found:
+
+   - 34 eligible marker rows at `source_token_count <= 3500`
+   - 2 eligible rows at `3501–8000`
+   - 36 total selected by `--max-source-tokens 8000`
+
+   That does not match the planned 31+57≈88. Because `candidates()` has no `ORDER BY`, even `--limit` does not define a stable cohort. Generate and review an exact node-ID manifest immediately before the run.
+
+5. **The 57 proposed mid-bucket nodes have not passed the stated dry run.**
+
+   A successful dry run of the first 31 is not evidence for the widened cohort. Run the exact local-only LLM path over every currently selected node before writing.
+
+6. **Successful response does not imply valid recovery.**
+
+   Any nonempty 0.5B-model output clears the marker. There is no semantic validation, minimum content check, repetition detection, or indication that an 8,000-token source was summarized from a head-only fragment. Mid-bucket recovery is inherently lossy with a 4,096 context and should be marked/audited as such.
+
+7. **Shared-server contention needs an operational stop rule.**
+
+   The recovery calls can queue behind production compression, increase gateway latency, or hit the 120-second timeout. `mlock` addresses paging, not inference-slot contention. Run during low traffic, in small batches, with pacing and monitoring of gateway latency/400s.
+
+8. **Failures do not produce a failing process exit.**
+
+   Exceptions are accumulated at [lines 454–455](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:454), but the program ends successfully at line 480. Automation cannot treat exit code zero as success.
+
+9. **The final integrity check is weaker than it appears.**
+
+   For external-content FTS5, add a content-correspondence check—commonly the rank-1 integrity form—and direct joins/queries for the updated node IDs. The plain command at [line 468](/home/hermes-pi/projects/lcm-hygiene/scripts/lcm_recover.py:468) should not be the only acceptance check.
+
+A safer run sequence is: verified SQLite backup, exact candidate manifest, full widened dry run, semantic spot review, then batches of 5–10 with stop-on-first unexpected failure and post-batch DB/FTS checks.
+
+## 4. Verdict
+
+**(a) v2.1 as written: NO-GO.**
+
+It is an empirical improvement for four samples, but the stated safety guarantee is false, the retry ladder grows after a dense first rung, and `--local-only` bypasses the live-write safety gate.
+
+**(b) Live run including the mid-bucket: NO-GO under the current plan.**
+
+It becomes **GO-WITH-MODIFICATIONS** after:
+
+- fixing the monotonic retry/token-sizing behavior;
+- adding `--local-only` to the live safety gate;
+- moving the old-summary read inside the write transaction and strengthening the predicate;
+- reconciling the current 36-row live population with the proposed 88-row cohort;
+- dry-running every exact candidate;
+- explicitly accepting and marking head-only/lossy summaries;
+- using verified backups, small monitored batches, meaningful exit status, and stronger post-write FTS validation.

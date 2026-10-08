@@ -1,0 +1,69 @@
+```text
+PATCH DESIGN:
+  - File: /home/hermes-pi/projects/hermes-lcm/escalation.py
+  - Insertion point: marker/helper changes at lines 460-539; pre-flight guard at lines 564-566,
+    before _build_l1_prompt (verified at line 566).
+  - Pseudocode:
+      _INPUT_TRUNCATION_MARKER = (
+          "\n\n[...input head/tail truncation — summary is lossy...]\n\n"
+      )
+
+      def _deterministic_truncate(text, max_tokens,
+                                  marker=_L3_TRUNCATION_MARKER):
+          marker_tokens = count_tokens(marker)
+          ...
+          return head + marker + tail
+
+      def summarize_with_escalation(..., llm_input_tokens: int = 3500):
+          prompt_text = text
+          input_truncated = count_tokens(text) > llm_input_tokens
+          if input_truncated:
+              prompt_text = _deterministic_truncate(
+                  text, llm_input_tokens,
+                  marker=_INPUT_TRUNCATION_MARKER,
+              )
+
+          l1_prompt = _build_l1_prompt(prompt_text, ...)
+          if l1_result:
+              prefix = _INPUT_TRUNCATION_MARKER if input_truncated else ""
+              return prefix + l1_result, 1
+
+          l2_prompt = _build_l2_prompt(prompt_text, ...)
+          if l2_result:
+              prefix = _INPUT_TRUNCATION_MARKER if input_truncated else ""
+              return prefix + l2_result, 2
+
+          # Unchanged: fallback operates on original full text.
+          return _deterministic_truncate(text, l3_truncate_tokens), 3
+
+  - What it changes about the audit surface:
+      Full-input summaries have no marker. Successful summaries of bounded head/tail
+      input carry the new input-truncation marker. L3 retains the existing literal
+      "deterministic truncation", so all three outcomes remain distinguishable.
+  - Interaction with existing helpers:
+      Generalizes _deterministic_truncate with an optional marker while preserving
+      its current default and bounded head/tail assembly (lines 502-539).
+      _truncate_text_to_tokens remains the token-aware slicing primitive (line 465).
+
+DELIVERY CHANNEL: B
+JUSTIFICATION:
+  A sibling fork is fast enough to protect Phase 3 while leaving the upstream checkout
+  clean. Pin the runtime environment/import path to a reviewed commit in
+  hermes-lcm-phase25; no gateway source-code change is required. Submit upstream later.
+
+REVERSIBILITY:
+  Restore the service/import environment to /home/hermes-pi/projects/hermes-lcm, restart
+  the runtime, then:
+  mv /home/hermes-pi/projects/hermes-lcm-phase25 \
+     /home/hermes-pi/projects/hermes-lcm-phase25.disabled
+
+RISKS:
+  - 3500 assumes the prompt plus generated output fits the configured 4096-token context.
+  - The new parameter/default needs tests for exact-budget, CJK, L1/L2 success, and L3 failure.
+  - Audit classification must give the new marker precedence if source text contains old markers.
+  - Deployment must prove lcm_recover imports the sibling fork before recovery resumes.
+
+OPEN QUESTIONS FOR HUMAN:
+  - What service/environment file controls the Python import path? Record its exact rollback command.
+  - Should 3500 be the upstream default, or a deployment-configurable default with the same effective value?
+```

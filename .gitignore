@@ -1,0 +1,12 @@
+# Future-copy prevention only.
+# This does NOT sanitize history. Commit 8b2529e already tracks
+# evidence/backups/lcm-pre-recovery-20260826.sqlite3 (827592704 bytes,
+# live ~/.hermes/lcm.db snapshot). Do not add a remote or push until a
+# separately authorized history-purge/rebuild project is completed.
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
+__pycache__/
+*.pyc
+*.pyo
+.DS_Store

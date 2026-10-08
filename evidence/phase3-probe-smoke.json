@@ -1,0 +1,162 @@
+{
+  "generated_epoch": 1787695139,
+  "fork": "/home/hermes-pi/projects/hermes-lcm-phase25",
+  "model_route": "custom:llama-cpp/Qwen2.5-0.5B-Instruct-Q4_K_M",
+  "rows_total": 449,
+  "buckets": {
+    "large": 248,
+    "fit": 137,
+    "mid": 57,
+    "boundary25": 7
+  },
+  "sampled": 12,
+  "outcomes": {
+    "skipped_cross_session": 3,
+    "llm_lossy_input": 7,
+    "fallback_l3": 2
+  },
+  "results": [
+    {
+      "node_id": 12,
+      "bucket": "fit",
+      "source_token_count": 856,
+      "old_summary_len": 191,
+      "outcome": "skipped_cross_session",
+      "duration_s": 0.0
+    },
+    {
+      "node_id": 248,
+      "bucket": "fit",
+      "source_token_count": 856,
+      "old_summary_len": 192,
+      "outcome": "skipped_cross_session",
+      "duration_s": 0.0
+    },
+    {
+      "node_id": 714,
+      "bucket": "fit",
+      "source_token_count": 1020,
+      "old_summary_len": 194,
+      "outcome": "skipped_cross_session",
+      "duration_s": 0.0
+    },
+    {
+      "node_id": 949,
+      "bucket": "boundary25",
+      "source_token_count": 3160,
+      "old_summary_len": 194,
+      "chars": 12626,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 144.4,
+      "outcome": "llm_lossy_input",
+      "summary_len_chars": 4681,
+      "summary_preview": "  [...input head/tail truncation \u2014 summary is lossy, full source preserved...]  **Conversation Segment Summary**  **Decisions & Conclusions (from assistant\u2019s pe"
+    },
+    {
+      "node_id": 969,
+      "bucket": "boundary25",
+      "source_token_count": 3298,
+      "old_summary_len": 194,
+      "chars": 13490,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 160.4,
+      "outcome": "llm_lossy_input",
+      "summary_len_chars": 4433,
+      "summary_preview": "  [...input head/tail truncation \u2014 summary is lossy, full source preserved...]  # PROMPRO Bankr Custody-Boundary Spike \u2014 Conversation Summary  ## Context & Mode"
+    },
+    {
+      "node_id": 1132,
+      "bucket": "boundary25",
+      "source_token_count": 3063,
+      "old_summary_len": 195,
+      "chars": 12294,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 85.2,
+      "outcome": "llm_lossy_input",
+      "summary_len_chars": 341,
+      "summary_preview": "  [...input head/tail truncation \u2014 summary is lossy, full source preserved...]  This conversation summary is a summary of the provided content, detailing the is"
+    },
+    {
+      "node_id": 721,
+      "bucket": "mid",
+      "source_token_count": 3621,
+      "old_summary_len": 194,
+      "chars": 15193,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 0.2,
+      "outcome": "fallback_l3",
+      "summary_len_chars": 2037,
+      "summary_preview": "[ASSISTANT]: Fortsetzung des Fact-Checks. Ich habe die Hauptseite und mehrere Unterseiten bereits eingelesen. Jetzt pr\u00fcfe ich die zentralen, unabh\u00e4ngig verifizi"
+    },
+    {
+      "node_id": 722,
+      "bucket": "mid",
+      "source_token_count": 4564,
+      "old_summary_len": 194,
+      "chars": 19196,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 151.8,
+      "outcome": "llm_lossy_input",
+      "summary_len_chars": 3532,
+      "summary_preview": "  [...input head/tail truncation \u2014 summary is lossy, full source preserved...]  **Summary: \u00d6GH (Austrian Free Hypnosis Society) Legitimacy / Fact-Check Investig"
+    },
+    {
+      "node_id": 877,
+      "bucket": "mid",
+      "source_token_count": 5095,
+      "old_summary_len": 195,
+      "chars": 22212,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 0.2,
+      "outcome": "fallback_l3",
+      "summary_len_chars": 2037,
+      "summary_preview": "[TOOL RESULT tool-2383c1d29aad404ca459bbf6dc3ca4f7]: {\"status\": \"success\", \"output\": \"=== Full post content ===\\n{\\n  \\\"ok\\\": true,\\n  \\\"post\\\": {\\n    \\\"id\\\": "
+    },
+    {
+      "node_id": 9,
+      "bucket": "large",
+      "source_token_count": 33584,
+      "old_summary_len": 192,
+      "chars": 150429,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 126.5,
+      "outcome": "llm_lossy_input",
+      "summary_len_chars": 3068,
+      "summary_preview": "  [...input head/tail truncation \u2014 summary is lossy, full source preserved...]  **Objective**: Use stealth-core to compile a list of *aussch\u00fcttende* (distributi"
+    },
+    {
+      "node_id": 10,
+      "bucket": "large",
+      "source_token_count": 28175,
+      "old_summary_len": 192,
+      "chars": 115965,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 141.9,
+      "outcome": "llm_lossy_input",
+      "summary_len_chars": 3512,
+      "summary_preview": "  [...input head/tail truncation \u2014 summary is lossy, full source preserved...]  **CONVERSATION SUMMARY \u2014 Robin Repo Stealth-Core Analysis**  **Objective:** User"
+    },
+    {
+      "node_id": 42,
+      "bucket": "large",
+      "source_token_count": 40201,
+      "old_summary_len": 193,
+      "chars": 183156,
+      "trigger_token_overflow": true,
+      "trigger_chars_overflow": true,
+      "duration_s": 126.0,
+      "outcome": "llm_lossy_input",
+      "summary_len_chars": 4531,
+      "summary_preview": "  [...input head/tail truncation \u2014 summary is lossy, full source preserved...]  # Summary for Future Turns  ## User Objective (Preserved) - \"Deal with everythin"
+    }
+  ],
+  "wall_seconds": 936.5
+}

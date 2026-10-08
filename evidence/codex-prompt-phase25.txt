@@ -1,0 +1,86 @@
+You are Codex acting as technical lead for a small upstream patch to `hermes-lcm`. The Hermes runtime cannot modify this codebase (security guard). Your job: design a minimal, reversible patch and recommend a delivery channel.
+
+PROJECT CONTEXT
+===============
+Path: /home/hermes-pi/projects/hermes-lcm/
+We have a host (Raspberry Pi 5) running Qwen2.5-0.5B-Instruct-Q4_K_M via llama-server on 127.0.0.1:8080. n_ctx=4096. This is the only model available for LCM summarization; no larger model is provisioned.
+
+PROBLEM
+=======
+Read-only classified inventory at
+/home/hermes-pi/projects/lcm-hygiene/evidence/snapshots/lcm-lossy-inventory-2026-08-25_22-50.md
+shows 651 L3 silent-truncation markers in the live DB (~/.hermes/lcm.db), split by cause axis:
+  - 144 capacity-fit (source_token_count <= 3500)  — M1 timeout fix helps
+  -  61 mid-overflow (3501-8000)                   — input too large; M1 doesn't help
+  - 446 large-overflow (>8000; up to 211K)         — input too large; M1 doesn't help
+  ==============  78% are capacity-shaped, M1 covers <= 31% =============
+
+Worst case: node 1609, source_token_count=211,781 (~52x n_ctx=4096).
+
+ROOT CAUSE (with line citations)
+================================
+summarize_with_escalation starts at hermes-lcm/escalation.py:545. It inlines the FULL text into the L1 prompt via _build_l1_prompt (escalation.py:414, the {text} at line 439). With Qwen2.5-0.5B n_ctx=4096, any input > ~3500 tokens physically cannot fit. L1 fails (context overflow), L2 also fails for the same reason, and L3 (deterministic truncation) fires at escalation.py:~600, producing the "deterministic truncation" marker.
+
+There is NO pre-flight sizing guard at the top of summarize_with_escalation.
+
+EXISTING MACHINERY YOU CAN USE
+==============================
+1. _truncate_text_to_tokens(text, max_tokens, *, from_end) at escalation.py:465
+   - Honors token budget via tiktoken encoder (not flat chars*4)
+   - Handles CJK / dense scripts correctly
+   - from_end=True takes the LAST max_tokens, from_end=False (default) takes the FIRST
+
+2. Head/tail assembler at escalation.py:519-524
+   - The deterministic L3 path uses this to keep "first portion + last portion" so start context and most-recent state both survive
+
+3. _L3_TRUNCATION_MARKER at escalation.py:460-462
+   - The literal "deterministic truncation" string the DB currently uses for silent-truncation markers. Audits distinguish clean summaries from truncated-input summaries via this string.
+
+WHY THIS MUST BE LCM-LEVEL (NOT GATEWAY)
+========================================
+Phase 3 of the project runs scripts/lcm_recover.py against /home/hermes-pi/.hermes/lcm.db. That script calls summarize_with_escalation DIRECTLY (lcm_recover.py:113 imports it; live_summary at lcm_recover.py:228-237 calls it). A gateway-level guard would leave Phase 3 unprotected — capacity-shaped nodes would still get low-fidelity stubs.
+
+CONSTRAINTS
+===========
+- Existing deterministic truncation must continue to be the FALLBACK (guaranteed-convergence contract).
+- The new guard must run BEFORE L1/L2 prompt construction (i.e., before _build_l1_prompt at line 566).
+- The guard must NOT silently consume the input — the audit log must be able to distinguish:
+  (a) clean summary of full input
+  (b) summary of head/tail-truncated input (Phase 2.5 outcome — useful, lossy)
+  (c) L3 deterministic fallback (current behaviour — also lossy but guaranteed)
+- Output budget: ~10-20 lines patch.
+- Must be reversible.
+- The n_ctx=4096 budget is for the LOCAL model. The patch should also respect an output-reserve (e.g., 512 tokens for the generated summary), so the effective INPUT budget is n_ctx - output_reserve = ~3500 tokens, matching the inventory's capacity-fit cutoff.
+- Phase 3 sharp edge (lcm_recover.py:49-53 idempotency predicate): if recovery runs against a capacity-shaped row BEFORE the guard lands, the row's truncation marker is permanently consumed by a stub. The guard fixes this — recovery can then re-evaluate against a properly-sized input.
+
+DELIVER
+=======
+Recommend ONE of these delivery channels and justify:
+(A) PR upstream to hermes-lcm (slow, requires upstream review)
+(B) Local fork patch — keep the patch in a sibling directory like hermes-lcm-phase25/ and configure the gateway to import from there (faster; keeps state clean)
+(C) In-tree patch via git apply to /home/hermes-pi/projects/hermes-lcm/  (fastest; mixes upstream with our patches; riskier for git pull)
+(D) Skip the patch and accept permanent loss on the 446 large-overflow nodes (cheapest; loses data)
+
+OUTPUT FORMAT (concise, fenced)
+================================
+PATCH DESIGN:
+  - File: <path>
+  - Insertion point: <line range>
+  - Pseudocode:
+      <10-30 lines>
+  - What it changes about the audit surface
+  - How it interacts with existing _truncate_text_to_tokens + _deterministic_truncate
+
+DELIVERY CHANNEL: <A|B|C|D>
+JUSTIFICATION: <2-4 lines>
+REVERSIBILITY: <exact revert command(s)>
+RISKS: <2-4 items>
+OPEN QUESTIONS FOR HUMAN: <bulleted list, or "none">
+
+Constraints on you:
+- DO NOT propose raising timeouts or changing the model.
+- DO NOT propose touching gateway code; the fix is LCM-only.
+- DO NOT propose installing a larger model (none is available on this host).
+- DO NOT touch scripts/lcm_recover.py — that's a separate patch (ADR-2026-08-25-10, already applied).
+- Read hermes-lcm/escalation.py:410-560 yourself before designing.
+- Verify your citations with grep -n before reporting.
